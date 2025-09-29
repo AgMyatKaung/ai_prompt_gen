@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Prompt Generator Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0a0a0f;
+            color: #e2e8f0;
+            overflow-x: hidden;
+        }
+        .hero-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(ellipse at top, rgba(29, 78, 216, 0.15), transparent 70%),
+                        radial-gradient(ellipse at bottom, rgba(79, 70, 229, 0.15), transparent 70%);
+            animation: pulse 10s infinite alternate;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.05); opacity: 1; }
+        }
+        .card {
+            background-color: rgba(23, 23, 33, 0.6);
+            border: 1px solid transparent;
+            background-image: linear-gradient(rgba(23, 23, 33, 0.7), rgba(23, 23, 33, 0.7)), 
+                              radial-gradient(circle at top left, rgba(59, 130, 246, 0.3), transparent 35%);
+            background-origin: border-box;
+            background-clip: padding-box, border-box;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .tab-button.active {
+            background-color: #3b82f6;
+            color: white;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+        }
+        .glowing-highlight {
+            transition: box-shadow 0.3s ease;
+        }
+        .glowing-highlight:focus-within {
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+            border-color: #3b82f6 !important;
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #1e293b;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 10;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8rem;
+            font-weight: 400;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #3b82f6;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #3b82f6;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .prompt-preview {
+            font-family: Consolas, 'Courier New', monospace;
+            background-color: rgba(10, 10, 15, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glow-btn {
+            transition: all 0.3s ease;
+        }
+        .glow-btn:hover:not(:disabled) {
+            box-shadow: 0 0 20px 5px rgba(59, 130, 246, 0.4);
+            transform: translateY(-2px);
+        }
+        .file-drop-zone {
+            border: 2px dashed #4a5568;
+            transition: all 0.3s ease;
+        }
+        .file-drop-zone.dragover {
+            border-color: #3b82f6;
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="hero-bg"></div>
+
+    <div class="container mx-auto px-4 py-8 md:py-12">
+        <!-- Header -->
+        <header class="text-center mb-10 md:mb-16">
+            <h1 class="text-4xl md:text-6xl font-bold text-white tracking-tight">AI Prompt Studio</h1>
+            <p class="text-lg md:text-xl text-blue-300 mt-2">Craft, Analyze, and Generate Prompts</p>
+        </header>
+
+        <!-- Main Content -->
+        <main>
+            <!-- Mode Switcher -->
+            <div class="flex justify-center mb-8 flex-wrap gap-2">
+                <div class="flex items-center space-x-2 bg-gray-800/50 p-1.5 rounded-full border border-gray-700">
+                    <button id="image-gen-tab" class="tab-button active text-white font-semibold py-2 px-6 rounded-full transition-all duration-300 text-sm md:text-base">Image Generator</button>
+                    <button id="video-gen-tab" class="tab-button text-gray-300 font-semibold py-2 px-6 rounded-full transition-all duration-300 text-sm md:text-base">Video Generator</button>
+                    <button id="img-to-prompt-tab" class="tab-button text-gray-300 font-semibold py-2 px-6 rounded-full transition-all duration-300 text-sm md:text-base">Image to Prompt</button>
+                    <button id="story-to-prompt-tab" class="tab-button text-gray-300 font-semibold py-2 px-6 rounded-full transition-all duration-300 text-sm md:text-base">Story to Prompt</button>
+                </div>
+            </div>
+
+            <!-- Generators -->
+            <div id="image-generator" class="fade-in">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Left Column: Settings -->
+                    <div class="lg:col-span-1">
+                        <div class="card p-6 md:p-8 rounded-2xl shadow-lg">
+                            <div class="flex justify-between items-center mb-6">
+                                <h2 class="text-2xl font-bold text-white">Image Prompt Generator</h2>
+                                <button id="inspire-me-btn" class="glow-btn bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold py-2 px-4 rounded-full transition-all flex items-center gap-2">
+                                    ✨ Inspire Me
+                                </button>
+                            </div>
+                            
+                            <!-- Main Inputs -->
+                             <div class="space-y-6">
+                                <div class="glowing-highlight rounded-lg">
+                                    <label for="img-subject" class="block text-sm font-medium text-gray-300 mb-1">Subject</label>
+                                    <input type="text" id="img-subject" class="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="e.g., A majestic lion in the savanna">
+                                </div>
+                                
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <div>
+                                        <label for="img-style" class="block text-sm font-medium text-gray-300 mb-1">Style</label>
+                                        <div class="glowing-highlight rounded-lg flex flex-col gap-2">
+                                            <select id="img-style" class="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                                <option>Hyperrealistic</option><option>Fantasy</option><option>Minimalist</option><option>Abstract</option><option>Pop Art</option><option>Steampunk</option><option>Cyberpunk</option><option>Art Nouveau</option><option>Surrealism</option><option>Impressionistic</option><option value="other">Other...</option>
+                                            </select>
+                                            <input type="text" id="img-style-other" class="hidden w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Enter custom style">
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                         <label for="img-medium" class="block text-sm font-medium text-gray-300 mb-1">Medium</label>
+                                         <div class="glowing-highlight rounded-lg flex flex-col gap-2">
+                                             <select id="img-medium" class="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                                <option>Photorealistic</option><option>Cinematic</option><option>3D Render</option><option>Illustration</option><option>Digital Art</option><option>Oil Painting</option><option>Watercolor</option><option>Pencil Sketch</option><option>Charcoal Drawing</option><option>Sculpture</option><option value="other">Other...</option>
+                                             </select>
+                                             <input type="text" id="img-medium-other" class="hidden w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Enter custom medium">
+                                         </div>
+                                    </div>
+
+                                    <div>
+                                        <label for="img-mood" class="block text-sm font-medium text-gray-300 mb-1">Mood</label>
+                                        <div class="glowing-highlight rounded-lg flex flex-col gap-2">
+                                            <select id="img-mood" class="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                                <option>Serene</option><option>Dramatic</option><option>Joyful</option><option>Mysterious</option><option>Melancholic</option><option>Energetic</option><option>Whimsical</option><option>Ominous</option><option>Nostalgic</option><option>Peaceful</option><option value="other">Other...</option>
+                                            </select>
+                                            <input type="text" id="img-mood-other" class="hidden w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Enter custom mood">
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <label for="img-colors" class="block text-sm font-medium text-gray-300 mb-1">Colors</label>
+                                        <div class="glowing-highlight rounded-lg flex flex-col gap-2">
+                                            <select id="img-colors" class="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                                <option>Vibrant Pastels</option><option>Monochrome</option><option>Neon Hues</option><option>Earthy Tones</option><option>Cool Tones</option><option>Warm Tones</option><option>Sepia</option><option>Duotone</option><option>Saturated</option><option>Desaturated</option><option value="other">Other...</option>
+                                            </select>
+                                            <input type="text" id="img-colors-other" class="hidden w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Enter custom colors">
+                                        </div>
+                                    </div>
+                                </div>
+                                 <div class="glowing-highlight rounded-lg">
+                                    <label for="img-details" class="block text-sm font-medium text-gray-300 mb-1">Details</label>
+                                    <div class="flex flex-col gap-2">
+                                        <select id="img-details" class="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                            <option>Intricate Details</option><option>Soft Focus</option><option>Sharp Focus</option><option>Wide Angle</option><option>Macro Shot</option><option>Film Grain</option><option>Bokeh</option><option>Lens Flare</option><option>Textured</option><option>Flat Shading</option><option value="other">Other...</option>
+                                        </select>
+                                        <input type="text" id="img-details-other" class="hidden w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Enter custom details">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Advanced Settings -->
+                            <div class="mt-8">
+                                <h3 class="text-xl font-semibold mb-4 text-white">Advanced Settings</h3>
+                                <div class="space-y-6">
+                                    <div class="glowing-highlight rounded-lg">
+                                        <label for="img-negative" class="block text-sm font-medium text-gray-300 mb-1 tooltip">Negative Prompt
+                                            <span class="tooltiptext">Keywords to exclude from the image. Helps refine results.</span>
+                                        </label>
+                                        <input type="text" id="img-negative" class="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="e.g., ugly, blurry, text">
+                                    </div>
+
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                        <div class="glowing-highlight rounded-lg">
+                                            <label for="img-aspect" class="block text-sm font-medium text-gray-300 mb-1 tooltip">Aspect Ratio
+                                                <span class="tooltiptext">The width-to-height ratio of the final image.</span>
+                                            </label>
+                                            <select id="img-aspect" class="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                                <option value="1:1">1:1 (Square)</option><option value="16:9" selected>16:9 (Widescreen)</option><option value="9:16">9:16 (Vertical)</option><option value="4:3">4:3 (Standard)</option><option value="3:2">3:2 (Photo)</option>
+                                            </select>
+                                        </div>
+                                         <div class="glowing-highlight rounded-lg">
+                                            <label for="img-resolution" class="block text-sm font-medium text-gray-300 mb-1 tooltip">Resolution
+                                                <span class="tooltiptext">The overall detail and clarity of the image.</span>
+                                            </label>
+                                            <select id="img-resolution" class="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                                <option>Standard</option><option>HD</option><option>2K</option><option selected>4K</option><option>8K</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label for="img-quality" class="block text-sm font-medium text-gray-300 mb-1 tooltip">Quality <span id="img-quality-value" class="font-bold text-blue-400">75</span>
+                                            <span class="tooltiptext">Controls the level of detail and artistic refinement. Higher is not always better.</span>
+                                        </label>
+                                        <input type="range" id="img-quality" min="1" max="100" value="75" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                    </div>
+
+                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                                        <div class="glowing-highlight rounded-lg">
+                                            <label for="img-seed" class="block text-sm font-medium text-gray-300 mb-1 tooltip">Seed
+                                                <span class="tooltiptext">A number to initialize the generation. Same seed + same prompt = same image.</span>
+                                            </label>
+                                            <input type="number" id="img-seed" class="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Random">
+                                        </div>
+                                        <div class="glowing-highlight rounded-lg">
+                                            <label for="img-cfg" class="block text-sm font-medium text-gray-300 mb-1 tooltip">CFG Scale
+                                                <span class="tooltiptext">How strictly the AI follows the prompt. (Usually 4-10)</span>
+                                            </label>
+                                            <input type="number" id="img-cfg" value="7" class="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                        </div>
+                                        <div class="glowing-highlight rounded-lg">
+                                            <label for="img-iterations" class="block text-sm font-medium text-gray-300 mb-1 tooltip">Iterations
+                                                <span class="tooltiptext">Number of refinement steps. More steps can increase detail. (Usually 20-50)</span>
+                                            </label>
+                                            <input type="number" id="img-iterations" value="25" class="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Preview & Actions -->
+                    <div class="lg:col-span-1">
+                        <div class="sticky top-8 space-y-8">
+                            <div class="card p-6 rounded-2xl shadow-lg">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="text-xl font-semibold text-white">Image Preview</h3>
+                                </div>
+                                <div id="img-preview-container" class="aspect-square bg-gray-900/70 rounded-lg flex items-center justify-center border border-gray-700 relative">
+                                    <div id="img-loader" class="hidden w-10 h-10 border-4 border-t-blue-500 border-gray-600 rounded-full animate-spin absolute z-10"></div>
+                                    <img id="img-preview-output" src="https://placehold.co/512x512/0a0a0f/3b82f6?text=Click+Generate" alt="AI Generated Image Preview" class="w-full h-full object-cover rounded-lg">
+                                </div>
+                                <div class="mt-4 flex space-x-3">
+                                    <button id="generate-img-preview" class="glow-btn w-2/3 bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-4 rounded-lg transition-all text-base">Generate ✨</button>
+                                    <button id="download-generated-img" disabled class="w-1/3 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition-all disabled:bg-gray-800 disabled:cursor-not-allowed disabled:text-gray-500 flex items-center justify-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
+                                        <span>Download</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card p-6 rounded-2xl shadow-lg">
+                                <h3 class="text-xl font-semibold mb-4 text-white">Presets</h3>
+                                <div class="flex flex-wrap gap-2">
+                                    <button class="img-preset-btn bg-blue-600/50 hover:bg-blue-600 text-white text-sm py-1.5 px-3 rounded-full transition-all" data-preset="cinematic">Cinematic Photo</button>
+                                    <button class="img-preset-btn bg-purple-600/50 hover:bg-purple-600 text-white text-sm py-1.5 px-3 rounded-full transition-all" data-preset="3d">3D Product Render</button>
+                                    <button class="img-preset-btn bg-green-600/50 hover:bg-green-600 text-white text-sm py-1.5 px-3 rounded-full transition-all" data-preset="illustration">Stylized Illustration</button>
+                                </div>
+                            </div>
+                            <div class="card p-6 rounded-2xl shadow-lg">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="text-xl font-semibold text-white">AI-Generated Prompt</h3>
+                                    <p id="img-word-count" class="text-xs text-gray-400">Word Count: 0</p>
+                                </div>
+                                <div id="img-prompt-container" class="prompt-preview min-h-[150px] p-4 rounded-lg text-gray-300 text-sm whitespace-pre-wrap leading-relaxed">
+                                    <span id="img-prompt-placeholder" class="text-gray-500">Click "Generate Prompt with AI" below...</span>
+                                    <div id="img-prompt-loader" class="hidden w-6 h-6 border-4 border-t-blue-500 border-gray-600 rounded-full animate-spin mx-auto"></div>
+                                    <p id="img-prompt-output"></p>
+                                </div>
+                                <div class="mt-6 flex flex-col space-y-3">
+                                    <button id="generate-ai-prompt" class="glow-btn w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-4 rounded-lg transition-all shadow-md hover:shadow-lg">✨ Generate Prompt with AI</button>
+                                    <div class="flex space-x-3">
+                                        <button id="copy-img-prompt" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-2.5 px-4 rounded-lg transition-all">Copy</button>
+                                        <button id="download-img-json" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-2.5 px-4 rounded-lg transition-all">Download</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="video-generator" class="hidden fade-in">
+                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Left Column: Settings -->
+                    <div class="lg:col-span-1">
+                        <div class="card p-6 md:p-8 rounded-2xl shadow-lg">
+                            <h2 class="text-2xl font-bold mb-6 text-white">Video Prompt Generator</h2>
+                            
+                            <!-- Main Inputs -->
+                            <div class="space-y-6">
+                                <div class="glowing-highlight rounded-lg">
+                                    <label for="vid-subject" class="block text-sm font-medium text-gray-300 mb-1">Subject / Theme</label>
+                                    <input type="text" id="vid-subject" class="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="e.g., A futuristic city at night">
+                                </div>
+                                
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <div>
+                                        <label for="vid-style" class="block text-sm font-medium text-gray-300 mb-1">Style</label>
+                                        <div class="glowing-highlight rounded-lg flex flex-col gap-2">
+                                            <select id="vid-style" class="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                                <option>Cinematic</option><option>Nature Documentary</option><option>Cyberpunk</option><option>Vintage Film</option><option>Anime</option><option>Stop Motion</option><option>Found Footage</option><option>Time-lapse</option><option value="other">Other...</option>
+                                            </select>
+                                            <input type="text" id="vid-style-other" class="hidden w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Enter custom style">
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <label for="vid-mood" class="block text-sm font-medium text-gray-300 mb-1">Mood</label>
+                                        <div class="glowing-highlight rounded-lg flex flex-col gap-2">
+                                            <select id="vid-mood" class="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                                <option>Mysterious</option><option>Upbeat</option><option>Epic</option><option>Suspenseful</option><option>Heartwarming</option><option>Chaotic</option><option>Dreamlike</option><option>Tense</option><option value="other">Other...</option>
+                                            </select>
+                                            <input type="text" id="vid-mood-other" class="hidden w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Enter custom mood">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                 <div class="glowing-highlight rounded-lg">
+                                    <label for="vid-colors" class="block text-sm font-medium text-gray-300 mb-1">Color Palette</label>
+                                    <div class="flex flex-col gap-2">
+                                        <select id="vid-colors" class="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                            <option>Neon Blues and Purples</option><option>Earthy Tones</option><option>Gritty Urban</option><option>Golden Hour Hues</option><option>High Contrast Black & White</option><option>Pastel Dream</option><option value="other">Other...</option>
+                                        </select>
+                                        <input type="text" id="vid-colors-other" class="hidden w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Enter custom colors">
+                                    </div>
+                                </div>
+
+                                <div class="glowing-highlight rounded-lg relative">
+                                    <label for="vid-keyframes" class="block text-sm font-medium text-gray-300 mb-1 tooltip">Scenes / Keyframes
+                                         <span class="tooltiptext">Describe the sequence of shots or actions in your video. Use '→' or new lines to separate scenes.</span>
+                                    </label>
+                                    <textarea id="vid-keyframes" rows="4" class="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Establishing shot of the city skyline → Close-up on a flying vehicle → Pullback to reveal the entire cityscape"></textarea>
+                                    <button id="expand-scenes-btn" class="absolute bottom-2 right-2 glow-btn bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold py-1 px-3 rounded-full transition-all flex items-center gap-1">
+                                        ✨ Expand
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Video Controls -->
+                            <div class="mt-8">
+                                <h3 class="text-xl font-semibold mb-4 text-white">Video Controls</h3>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                     <div class="glowing-highlight rounded-lg">
+                                        <label for="vid-duration" class="block text-sm font-medium text-gray-300 mb-1">Duration (s)</label>
+                                        <input type="number" id="vid-duration" value="10" class="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                    </div>
+                                    <div class="glowing-highlight rounded-lg">
+                                        <label for="vid-fps" class="block text-sm font-medium text-gray-300 mb-1">FPS</label>
+                                        <select id="vid-fps" class="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                            <option>24</option><option>30</option><option>60</option>
+                                        </select>
+                                    </div>
+                                    <div class="glowing-highlight rounded-lg">
+                                        <label for="vid-motion" class="block text-sm font-medium text-gray-300 mb-1">Motion Style</label>
+                                        <select id="vid-motion" class="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                            <option>Smooth Pan</option><option>Cinematic Dolly</option><option>Parallax</option><option>Fast Cuts</option><option>Static</option>
+                                        </select>
+                                    </div>
+                                    <div class="glowing-highlight rounded-lg">
+                                        <label for="vid-aspect" class="block text-sm font-medium text-gray-300 mb-1">Aspect Ratio</label>
+                                        <select id="vid-aspect" class="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                            <option value="16:9" selected>16:9 (Widescreen)</option><option value="9:16">9:16 (Vertical)</option><option value="1:1">1:1 (Square)</option><option value="21:9">21:9 (Cinemascope)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Preview & Actions -->
+                    <div class="lg:col-span-1">
+                        <div class="sticky top-8 space-y-8">
+                            <div class="card p-6 rounded-2xl shadow-lg">
+                                <h3 class="text-xl font-semibold mb-4 text-white">Presets</h3>
+                                <div class="flex flex-wrap gap-2">
+                                    <button class="vid-preset-btn bg-blue-600/50 hover:bg-blue-600 text-white text-sm py-1.5 px-3 rounded-full transition-all" data-preset="cinematic">Cinematic Short</button>
+                                    <button class="vid-preset-btn bg-purple-600/50 hover:bg-purple-600 text-white text-sm py-1.5 px-3 rounded-full transition-all" data-preset="ad">Futuristic Ad</button>
+                                    <button class="vid-preset-btn bg-green-600/50 hover:bg-green-600 text-white text-sm py-1.5 px-3 rounded-full transition-all" data-preset="demo">Product Demo</button>
+                                </div>
+                            </div>
+                            <div class="card p-6 rounded-2xl shadow-lg">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="text-xl font-semibold text-white">AI-Generated Prompt</h3>
+                                    <p id="vid-word-count" class="text-xs text-gray-400">Word Count: 0</p>
+                                </div>
+                                <div class="prompt-preview min-h-[250px] p-4 rounded-lg text-gray-300 text-sm whitespace-pre-wrap leading-relaxed">
+                                    <span id="vid-prompt-placeholder" class="text-gray-500">Click "Generate Prompt with AI" below...</span>
+                                    <div id="vid-prompt-loader" class="hidden w-6 h-6 border-4 border-t-blue-500 border-gray-600 rounded-full animate-spin mx-auto"></div>
+                                    <p id="vid-prompt-output"></p>
+                                </div>
+                                <div class="mt-6 flex flex-col space-y-3">
+                                    <button id="generate-ai-vid-prompt" class="glow-btn w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-4 rounded-lg transition-all shadow-md hover:shadow-lg">✨ Generate Prompt with AI</button>
+                                    <div class="flex space-x-3">
+                                        <button id="copy-vid-prompt" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-2.5 px-4 rounded-lg transition-all">Copy</button>
+                                        <button id="download-vid-json" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-2.5 px-4 rounded-lg transition-all">Download</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="image-to-prompt-generator" class="hidden fade-in">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Left: Image Upload -->
+                    <div>
+                        <div class="card p-6 md:p-8 rounded-2xl shadow-lg">
+                            <h2 class="text-2xl font-bold text-white mb-6">Image to Prompt</h2>
+                            <div id="i2p-drop-zone" class="file-drop-zone rounded-lg p-6 text-center cursor-pointer">
+                                <input type="file" id="i2p-file-input" class="hidden" accept="image/png, image/jpeg, image/webp">
+                                <div id="i2p-upload-ui">
+                                    <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                                    <p class="mt-2 text-gray-300"><span class="font-semibold text-blue-400">Click to upload</span> or drag and drop</p>
+                                    <p class="text-xs text-gray-500 mt-1">PNG, JPG, WEBP up to 10MB</p>
+                                </div>
+                                <img id="i2p-preview" class="hidden max-h-64 mx-auto rounded-lg" alt="Image preview"/>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Right: Generated Prompt -->
+                    <div>
+                        <div class="sticky top-8 card p-6 md:p-8 rounded-2xl shadow-lg">
+                             <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-xl font-semibold text-white">Generated Prompt</h3>
+                                <p id="i2p-word-count" class="text-xs text-gray-400">Word Count: 0</p>
+                            </div>
+                            <div class="prompt-preview min-h-[250px] p-4 rounded-lg text-gray-300 text-sm whitespace-pre-wrap leading-relaxed">
+                                <span id="i2p-placeholder" class="text-gray-500">Upload an image and click generate...</span>
+                                <div id="i2p-loader" class="hidden w-6 h-6 border-4 border-t-blue-500 border-gray-600 rounded-full animate-spin mx-auto"></div>
+                                <p id="i2p-output"></p>
+                            </div>
+                            <div class="mt-6 flex flex-col space-y-3">
+                                <button id="i2p-generate-btn" disabled class="glow-btn w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-4 rounded-lg transition-all shadow-md disabled:bg-gray-600 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none">✨ Generate Prompt from Image</button>
+                                <div class="flex space-x-3">
+                                    <button id="i2p-copy-btn" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-2.5 px-4 rounded-lg transition-all">Copy</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="story-to-prompt-generator" class="hidden fade-in">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Left: Story Input -->
+                    <div>
+                        <div class="card p-6 md:p-8 rounded-2xl shadow-lg">
+                            <h2 class="text-2xl font-bold text-white mb-6">Story to Prompt</h2>
+                            <div class="glowing-highlight rounded-lg">
+                                <label for="s2p-text-input" class="block text-sm font-medium text-gray-300 mb-1">Paste your story, poem, or description here</label>
+                                <textarea id="s2p-text-input" rows="15" class="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="In a realm where rivers of liquid starlight flowed through crystalline forests, a lone knight clad in obsidian armor stood before a weeping willow whose leaves were made of pure silver..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Right: Generated Prompt -->
+                    <div>
+                        <div class="sticky top-8 card p-6 md:p-8 rounded-2xl shadow-lg">
+                             <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-xl font-semibold text-white">Generated Prompt</h3>
+                                <p id="s2p-word-count" class="text-xs text-gray-400">Word Count: 0</p>
+                            </div>
+                            <div class="prompt-preview min-h-[250px] p-4 rounded-lg text-gray-300 text-sm whitespace-pre-wrap leading-relaxed">
+                                <span id="s2p-placeholder" class="text-gray-500">Write some text and click generate...</span>
+                                <div id="s2p-loader" class="hidden w-6 h-6 border-4 border-t-blue-500 border-gray-600 rounded-full animate-spin mx-auto"></div>
+                                <p id="s2p-output"></p>
+                            </div>
+                            <div class="mt-6 flex flex-col space-y-3">
+                                <button id="s2p-generate-btn" class="glow-btn w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-4 rounded-lg transition-all shadow-md">✨ Generate Prompt from Text</button>
+                                <div class="flex space-x-3">
+                                    <button id="s2p-copy-btn" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-2.5 px-4 rounded-lg transition-all">Copy</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Tab switching logic
+            const tabs = [
+                { id: 'image-gen-tab', generator: 'image-generator' },
+                { id: 'video-gen-tab', generator: 'video-generator' },
+                { id: 'img-to-prompt-tab', generator: 'image-to-prompt-generator' },
+                { id: 'story-to-prompt-tab', generator: 'story-to-prompt-generator' }
+            ];
+
+            tabs.forEach(tabInfo => {
+                const tabButton = document.getElementById(tabInfo.id);
+                tabButton.addEventListener('click', () => {
+                    // Deactivate all tabs and hide all generators
+                    tabs.forEach(t => {
+                        document.getElementById(t.id).classList.remove('active');
+                        document.getElementById(t.generator).style.display = 'none';
+                    });
+                    // Activate clicked tab and show its generator
+                    tabButton.classList.add('active');
+                    document.getElementById(tabInfo.generator).style.display = 'block';
+                });
+            });
+
+
+            // --- IMAGE GENERATOR LOGIC ---
+
+            const imgInputs = [
+                'img-subject', 'img-style', 'img-medium', 'img-mood', 'img-colors', 'img-details',
+                'img-negative', 'img-aspect', 'img-resolution', 'img-quality', 'img-seed', 'img-cfg', 'img-iterations'
+            ];
+            
+            const imgWordCount = document.getElementById('img-word-count');
+            const imgQualitySlider = document.getElementById('img-quality');
+            const imgQualityValue = document.getElementById('img-quality-value');
+            const generateImgPreviewBtn = document.getElementById('generate-img-preview');
+            const imgPreviewOutput = document.getElementById('img-preview-output');
+            const imgLoader = document.getElementById('img-loader');
+            const downloadGeneratedImgBtn = document.getElementById('download-generated-img');
+            const generateAiPromptBtn = document.getElementById('generate-ai-prompt');
+            const imgPromptOutput = document.getElementById('img-prompt-output');
+            const imgPromptLoader = document.getElementById('img-prompt-loader');
+            const imgPromptPlaceholder = document.getElementById('img-prompt-placeholder');
+            const inspireMeBtn = document.getElementById('inspire-me-btn');
+
+            // --- Custom Dropdown Logic (Image) ---
+            const imgCustomDropdowns = ['style', 'medium', 'mood', 'colors', 'details'];
+            imgCustomDropdowns.forEach(field => {
+                const selectEl = document.getElementById(`img-${field}`);
+                const otherInputEl = document.getElementById(`img-${field}-other`);
+                if (selectEl && otherInputEl) {
+                    selectEl.addEventListener('change', () => {
+                        if (selectEl.value === 'other') {
+                            otherInputEl.classList.remove('hidden');
+                        } else {
+                            otherInputEl.classList.add('hidden');
+                        }
+                    });
+                }
+            });
+
+            const getImgInputValues = () => {
+                const values = {};
+                imgInputs.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+
+                    const key = id.replace('img-', '');
+                    
+                    if (imgCustomDropdowns.includes(key) && el.value === 'other') {
+                        const otherEl = document.getElementById(`${id}-other`);
+                        values[key] = otherEl ? otherEl.value : '';
+                    } else {
+                        values[key] = el.value;
+                    }
+                });
+                return values;
+            };
+            
+            const setImgInputValues = (data) => {
+                 for (const key in data) {
+                    const el = document.getElementById(`img-${key}`);
+                    if (el) {
+                        if (imgCustomDropdowns.includes(key)) {
+                            const optionExists = [...el.options].some(opt => opt.value.toLowerCase() === data[key].toLowerCase());
+                            const otherInput = document.getElementById(`img-${key}-other`);
+                            if (optionExists) {
+                                el.value = [...el.options].find(opt => opt.value.toLowerCase() === data[key].toLowerCase()).value;
+                                otherInput.classList.add('hidden');
+                            } else {
+                                el.value = 'other';
+                                otherInput.classList.remove('hidden');
+                                otherInput.value = data[key];
+                            }
+                        } else {
+                            el.value = data[key];
+                        }
+                        if (key === 'quality') {
+                            imgQualityValue.textContent = data[key];
+                        }
+                    }
+                }
+            };
+
+            const updateImgWordCount = (text) => {
+                const wordList = text.trim().split(/\s+/).filter(Boolean);
+                imgWordCount.textContent = `Word Count: ${wordList.length}`;
+            };
+
+            const buildImgMetaPrompt = () => {
+                const values = getImgInputValues();
+                let metaPrompt = `As an expert prompt engineer for generative AI image models, create a vivid and effective prompt based on the following user-provided elements. Combine these elements into a single, cohesive, and descriptive paragraph. Do not use markdown or special formatting. After the main description, include the technical parameters provided by the user.
+
+                **Core Subject:** ${values.subject || 'a beautiful scene'}
+                **Desired Style:** ${values.style || 'any'}
+                **Artistic Medium:** ${values.medium || 'any'}
+                **Mood / Atmosphere:** ${values.mood || 'any'}
+                **Color Scheme:** ${values.colors || 'any'}
+                **Key Details to Include:** ${values.details || 'any'}
+                
+                **Technical Parameters:**
+                - Aspect Ratio: --ar ${values.aspect}
+                - Quality: --q ${values.quality}
+                - Resolution: ${values.resolution && values.resolution !== 'Standard' ? `--${values.resolution.toLowerCase()}` : ''}
+                - Seed: ${values.seed ? `--seed ${values.seed}` : ''}
+                - CFG Scale: ${values.cfg ? `--cfg ${values.cfg}` : ''}
+                - Iterations/Steps: ${values.iterations ? `--steps ${values.iterations}` : ''}
+                - Negative Prompt (exclude these): ${values.negative ? `--no ${values.negative}` : ''}
+                
+                Generate a single, complete prompt now.`;
+                return metaPrompt;
+            }
+            
+            imgQualitySlider.addEventListener('input', (e) => {
+                imgQualityValue.textContent = e.target.value;
+            });
+
+            const imgPresets = {
+                cinematic: { subject: 'A lone wanderer on a cliff overlooking a futuristic city at dusk', style: 'cinematic, hyperrealistic', medium: 'Photorealistic', mood: 'dramatic, contemplative', colors: 'deep blues, vibrant oranges, neon highlights', details: 'anamorphic lens flare, film grain, wide-angle shot', aspect: '16:9', quality: '85', resolution: '4K', cfg: '8' },
+                '3d': { subject: 'A sleek, minimalist wireless earbud floating mid-air', style: '3D render, product shot', medium: '3D Render', mood: 'clean, professional', colors: 'matte black, silver accents, soft studio lighting', details: 'intricate details, macro shot, soft shadows, on a plain background', aspect: '1:1', quality: '90', resolution: '2K', cfg: '9' },
+                illustration: { subject: 'A magical fox in an enchanted forest', style: 'stylized vector illustration, whimsical', medium: 'Illustration', mood: 'magical, serene', colors: 'glowing pastels, vibrant greens', details: 'clean lines, fantasy art style, cel-shaded', aspect: '9:16', quality: '70', resolution: 'HD', cfg: '6' }
+            };
+
+            document.querySelectorAll('.img-preset-btn').forEach(button => {
+                button.addEventListener('click', () => {
+                    const preset = imgPresets[button.dataset.preset];
+                    if (preset) {
+                        setImgInputValues(preset);
+                    }
+                });
+            });
+            
+            document.getElementById('copy-img-prompt').addEventListener('click', (e) => {
+                const textToCopy = imgPromptOutput.innerText;
+                if (!textToCopy) return;
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    e.target.textContent = 'Copied!';
+                    setTimeout(() => e.target.textContent = 'Copy', 2000);
+                });
+            });
+
+            document.getElementById('download-img-json').addEventListener('click', () => {
+                const data = getImgInputValues();
+                const json = JSON.stringify({ prompt: imgPromptOutput.innerText, settings: data }, null, 2);
+                const blob = new Blob([json], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = 'image-prompt.json';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+            
+            async function callGemini(userPrompt, isJson = false, imageData = null) {
+                 const apiKey = ""; 
+                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                 
+                 const parts = [{ text: userPrompt }];
+                 if (imageData) {
+                    parts.push({
+                        inlineData: {
+                            mimeType: imageData.mimeType,
+                            data: imageData.base64
+                        }
+                    });
+                 }
+                 const payload = { contents: [{ parts: parts }] };
+
+                 if (isJson) {
+                    payload.generationConfig = {
+                        responseMimeType: "application/json",
+                    };
+                 }
+
+                 const response = await fetchWithRetries(apiUrl, {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify(payload)
+                 });
+                 
+                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                 const result = await response.json();
+                 return result.candidates?.[0]?.content?.parts?.[0]?.text;
+            }
+
+            // --- AI Prompt Generation ---
+            generateAiPromptBtn.addEventListener('click', async () => {
+                const userPrompt = buildImgMetaPrompt();
+                
+                imgPromptPlaceholder.classList.add('hidden');
+                imgPromptOutput.innerText = '';
+                imgPromptLoader.classList.remove('hidden');
+                generateAiPromptBtn.disabled = true;
+                generateAiPromptBtn.textContent = 'Generating...';
+
+                try {
+                    const generatedText = await callGemini(userPrompt);
+                    if (generatedText) {
+                        imgPromptOutput.innerText = generatedText.trim();
+                        updateImgWordCount(generatedText);
+                    } else {
+                        imgPromptOutput.innerText = 'Error: Could not generate prompt. Please try again.';
+                         updateImgWordCount('');
+                    }
+                } catch (error) {
+                    console.error('Error generating AI prompt:', error);
+                    imgPromptOutput.innerText = 'Error: Request failed. Please check the console for details.';
+                    updateImgWordCount('');
+                } finally {
+                     imgPromptLoader.classList.add('hidden');
+                     generateAiPromptBtn.disabled = false;
+                     generateAiPromptBtn.textContent = '✨ Generate Prompt with AI';
+                }
+            });
+
+            // --- Inspire Me Feature ---
+            inspireMeBtn.addEventListener('click', async () => {
+                const originalText = inspireMeBtn.innerHTML;
+                inspireMeBtn.disabled = true;
+                inspireMeBtn.innerHTML = `<div class="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin"></div>`;
+
+                const inspirationPrompt = `You are an AI assistant for artists. Generate a single, random, creative, and visually interesting idea for an image. Provide the output as a JSON object with the following keys: "subject", "style", "medium", "mood", "colors", "details".`;
+                
+                try {
+                    const jsonString = await callGemini(inspirationPrompt, true);
+                    const idea = JSON.parse(jsonString);
+                    setImgInputValues(idea);
+                } catch (error) {
+                    console.error("Inspire Me error:", error);
+                    // In case of error, set a default
+                    setImgInputValues({ subject: 'A tranquil forest scene at sunrise' });
+                } finally {
+                    inspireMeBtn.disabled = false;
+                    inspireMeBtn.innerHTML = originalText;
+                }
+            });
+            
+            // --- Image Preview Generation ---
+            async function fetchWithRetries(url, options, retries = 3, delay = 1000) {
+                for (let i = 0; i < retries; i++) {
+                    try {
+                        const response = await fetch(url, options);
+                        if (!response.ok && response.status === 429) { // Too Many Requests
+                            console.warn(`Throttled. Retrying in ${delay * Math.pow(2, i)}ms...`);
+                            throw new Error('Throttled');
+                        }
+                        return response;
+                    } catch (error) {
+                        if (i === retries - 1) throw error;
+                        await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
+                    }
+                }
+            }
+
+            generateImgPreviewBtn.addEventListener('click', async () => {
+                const prompt = imgPromptOutput.innerText;
+                if (!prompt || prompt.trim().split(/\s+/).filter(Boolean).length < 2) {
+                    // Temporarily change button text to give user feedback
+                    const originalText = generateImgPreviewBtn.textContent;
+                    generateImgPreviewBtn.textContent = 'Generate a prompt first!';
+                    setTimeout(() => { generateImgPreviewBtn.textContent = originalText; }, 2000);
+                    return;
+                }
+
+                imgLoader.classList.remove('hidden');
+                imgPreviewOutput.classList.add('hidden');
+                generateImgPreviewBtn.disabled = true;
+                downloadGeneratedImgBtn.disabled = true;
+                generateImgPreviewBtn.textContent = 'Generating...';
+
+                const apiKey = ""; 
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+                const payload = { instances: [{ prompt: prompt }], parameters: { "sampleCount": 1 } };
+
+                try {
+                    const response = await fetchWithRetries(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    if (result.predictions && result.predictions[0]?.bytesBase64Encoded) {
+                        imgPreviewOutput.src = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+                        downloadGeneratedImgBtn.disabled = false;
+                    } else {
+                        console.error('API response error:', result);
+                        imgPreviewOutput.src = `https://placehold.co/512x512/0a0a0f/e04040?text=API+Error`;
+                    }
+                } catch (error) {
+                    console.error('Error generating image preview:', error);
+                    imgPreviewOutput.src = `https://placehold.co/512x512/0a0a0f/e04040?text=Request+Failed`;
+                } finally {
+                    imgLoader.classList.add('hidden');
+                    imgPreviewOutput.classList.remove('hidden');
+                    generateImgPreviewBtn.disabled = false;
+                    generateImgPreviewBtn.textContent = 'Generate ✨';
+                }
+            });
+
+            downloadGeneratedImgBtn.addEventListener('click', () => {
+                const imageUrl = imgPreviewOutput.src;
+                if (!imageUrl || imageUrl.startsWith('https://placehold.co')) {
+                    return;
+                }
+                const a = document.createElement('a');
+                a.href = imageUrl;
+                a.download = 'ai-studio-image.png';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            });
+
+
+            // --- VIDEO GENERATOR LOGIC ---
+            const vidInputs = ['vid-subject', 'vid-style', 'vid-mood', 'vid-colors', 'vid-keyframes', 'vid-duration', 'vid-fps', 'vid-motion', 'vid-aspect'];
+            const vidWordCount = document.getElementById('vid-word-count');
+            const expandScenesBtn = document.getElementById('expand-scenes-btn');
+            const keyframesTextarea = document.getElementById('vid-keyframes');
+            const generateAiVidPromptBtn = document.getElementById('generate-ai-vid-prompt');
+            const vidPromptPlaceholder = document.getElementById('vid-prompt-placeholder');
+            const vidPromptOutput = document.getElementById('vid-prompt-output');
+            const vidPromptLoader = document.getElementById('vid-prompt-loader');
+            
+            const vidCustomDropdowns = ['style', 'mood', 'colors'];
+            vidCustomDropdowns.forEach(field => {
+                const selectEl = document.getElementById(`vid-${field}`);
+                const otherInputEl = document.getElementById(`vid-${field}-other`);
+                if (selectEl && otherInputEl) {
+                    selectEl.addEventListener('change', () => {
+                        if (selectEl.value === 'other') {
+                            otherInputEl.classList.remove('hidden');
+                        } else {
+                            otherInputEl.classList.add('hidden');
+                        }
+                    });
+                }
+            });
+
+            const getVidInputValues = () => {
+                const values = {};
+                vidInputs.forEach(id => {
+                    const el = document.getElementById(id);
+                     if (!el) return;
+                    const key = id.replace('vid-', '');
+                    if (vidCustomDropdowns.includes(key) && el.value === 'other') {
+                        const otherEl = document.getElementById(`${id}-other`);
+                        values[key] = otherEl ? otherEl.value : '';
+                    } else {
+                        values[key] = el.value;
+                    }
+                });
+                return values;
+            };
+
+            const buildVidMetaPrompt = () => {
+                const values = getVidInputValues();
+                const scenes = values.keyframes.replace(/→/g, '\n').split('\n').map(s => s.trim()).filter(Boolean);
+                let sceneDescription = "Not specified.";
+                if (scenes.length > 0) {
+                   sceneDescription = `\n- ${scenes.join('\n- ')}`;
+                }
+
+                let metaPrompt = `As an expert scriptwriter and cinematographer for AI video generation, create a compelling and detailed prompt based on these user inputs. Combine them into a cohesive narrative or descriptive sequence. Do not use markdown. Start with a main descriptive paragraph, then list the sequence of shots clearly. Finally, include the technical parameters.
+
+                **Core Subject/Theme:** ${values.subject || 'A short film'}
+                **Desired Style:** ${values.style || 'any'}
+                **Mood / Atmosphere:** ${values.mood || 'any'}
+                **Color Palette:** ${values.colors || 'any'}
+                **Sequence of Scenes:** ${sceneDescription}
+                
+                **Technical Parameters:**
+                - Duration: --duration ${values.duration}s
+                - FPS: --fps ${values.fps}
+                - Motion Style: --motion "${values.motion}"
+                - Aspect Ratio: --ar ${values.aspect}
+                
+                Generate a single, complete prompt now.`;
+                return metaPrompt;
+            }
+            
+            const updateVidWordCount = (text) => {
+                vidWordCount.textContent = `Word Count: ${text.trim().split(/\s+/).filter(Boolean).length}`;
+            };
+            
+            expandScenesBtn.addEventListener('click', async () => {
+                const currentScenes = keyframesTextarea.value;
+                if (!currentScenes.trim()) return;
+
+                const originalText = expandScenesBtn.innerHTML;
+                expandScenesBtn.disabled = true;
+                expandScenesBtn.innerHTML = `<div class="w-3 h-3 border-2 border-t-transparent border-white rounded-full animate-spin"></div>`;
+
+                const expanderPrompt = `You are a creative scriptwriter. Take the following simple scene descriptions and expand them into a more detailed, visually rich sequence of shots with specific camera actions. Keep the language concise and suitable for an AI video generator. Respond only with the expanded sequence, using "→" to separate each shot.\n\nUser Input: "${currentScenes}"`;
+                
+                try {
+                    const expandedText = await callGemini(expanderPrompt);
+                    if (expandedText) {
+                        keyframesTextarea.value = expandedText.trim();
+                    }
+                } catch (error) {
+                    console.error("Expand Scenes error:", error);
+                } finally {
+                    expandScenesBtn.disabled = false;
+                    expandScenesBtn.innerHTML = originalText;
+                }
+            });
+            
+            generateAiVidPromptBtn.addEventListener('click', async () => {
+                 const userPrompt = buildVidMetaPrompt();
+                
+                vidPromptPlaceholder.classList.add('hidden');
+                vidPromptOutput.innerText = '';
+                vidPromptLoader.classList.remove('hidden');
+                generateAiVidPromptBtn.disabled = true;
+                generateAiVidPromptBtn.textContent = 'Generating...';
+
+                try {
+                    const generatedText = await callGemini(userPrompt);
+                    if (generatedText) {
+                        vidPromptOutput.innerText = generatedText.trim();
+                        updateVidWordCount(generatedText);
+                    } else {
+                        vidPromptOutput.innerText = 'Error: Could not generate prompt. Please try again.';
+                         updateVidWordCount('');
+                    }
+                } catch (error) {
+                    console.error('Error generating AI video prompt:', error);
+                    vidPromptOutput.innerText = 'Error: Request failed. Please check the console for details.';
+                    updateVidWordCount('');
+                } finally {
+                     vidPromptLoader.classList.add('hidden');
+                     generateAiVidPromptBtn.disabled = false;
+                     generateAiVidPromptBtn.textContent = '✨ Generate Prompt with AI';
+                }
+            });
+
+            const vidPresets = {
+                cinematic: { subject: 'A lone astronaut discovering an ancient alien artifact on Mars', style: 'Cinematic', mood: 'awe-inspiring, mysterious', colors: 'red dusty plains, cold blue metallic artifact', keyframes: 'Wide shot of Martian landscape → Astronaut approaches glowing artifact → Close-up on astronaut\'s helmet reflection → Artifact pulses with light', duration: '15', fps: '24', motion: 'Smooth Pan', aspect: '21:9', },
+                ad: { subject: 'A futuristic electric car driving through a neon-lit city', style: 'slick, high-energy advertisement', mood: 'exciting, modern, luxurious', colors: 'Neon Blues and Purples', keyframes: 'Fast cut of wheels spinning → Car zips past camera, motion blur → Interior shot of holographic dashboard → Car parked on a skyscraper helipad', duration: '8', fps: '60', motion: 'Fast Cuts', aspect: '16:9', },
+                demo: { subject: 'A new smartphone being assembled by robotic arms', style: 'clean product demo, minimalist', mood: 'technical, precise, elegant', colors: 'white background, brushed aluminum, subtle highlights', keyframes: 'Robotic arm places the screen → Microchips are precisely set → The back cover snaps on → The phone powers on with a bright logo', duration: '12', fps: '30', motion: 'Cinematic Dolly', aspect: '1:1', }
+            };
+            
+            document.querySelectorAll('.vid-preset-btn').forEach(button => {
+                button.addEventListener('click', () => {
+                    const preset = vidPresets[button.dataset.preset];
+                    if (preset) {
+                        for (const key in preset) {
+                            const el = document.getElementById(`vid-${key}`);
+                            if (el) {
+                                if (vidCustomDropdowns.includes(key)) {
+                                    const optionExists = [...el.options].some(opt => opt.value === preset[key]);
+                                    const otherInput = document.getElementById(`vid-${key}-other`);
+                                    if(optionExists) {
+                                        el.value = preset[key];
+                                        otherInput.classList.add('hidden');
+                                    } else {
+                                        el.value = 'other';
+                                        otherInput.classList.remove('hidden');
+                                        otherInput.value = preset[key];
+                                    }
+                                } else {
+                                    el.value = preset[key];
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+
+             document.getElementById('copy-vid-prompt').addEventListener('click', (e) => {
+                const textToCopy = vidPromptOutput.innerText;
+                if (!textToCopy) return;
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    e.target.textContent = 'Copied!';
+                    setTimeout(() => e.target.textContent = 'Copy', 2000);
+                });
+            });
+
+            document.getElementById('download-vid-json').addEventListener('click', () => {
+                const data = getVidInputValues();
+                const json = JSON.stringify({ prompt: vidPromptOutput.innerText, settings: data }, null, 2);
+                const blob = new Blob([json], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = 'video-prompt.json';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+            
+            // --- IMAGE TO PROMPT LOGIC ---
+            const i2pDropZone = document.getElementById('i2p-drop-zone');
+            const i2pFileInput = document.getElementById('i2p-file-input');
+            const i2pUploadUI = document.getElementById('i2p-upload-ui');
+            const i2pPreview = document.getElementById('i2p-preview');
+            const i2pGenerateBtn = document.getElementById('i2p-generate-btn');
+            const i2pPlaceholder = document.getElementById('i2p-placeholder');
+            const i2pLoader = document.getElementById('i2p-loader');
+            const i2pOutput = document.getElementById('i2p-output');
+            const i2pWordCount = document.getElementById('i2p-word-count');
+            const i2pCopyBtn = document.getElementById('i2p-copy-btn');
+            let i2pImageData = null;
+
+            i2pDropZone.addEventListener('click', () => i2pFileInput.click());
+            i2pDropZone.addEventListener('dragover', (e) => { e.preventDefault(); i2pDropZone.classList.add('dragover'); });
+            i2pDropZone.addEventListener('dragleave', () => i2pDropZone.classList.remove('dragover'));
+            i2pDropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                i2pDropZone.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleImageFile(files[0]);
+                }
+            });
+            i2pFileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleImageFile(e.target.files[0]);
+                }
+            });
+
+            function handleImageFile(file) {
+                if (!file.type.startsWith('image/')) return;
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    i2pPreview.src = reader.result;
+                    i2pPreview.classList.remove('hidden');
+                    i2pUploadUI.classList.add('hidden');
+                    i2pGenerateBtn.disabled = false;
+                    const base64String = reader.result.split(',')[1];
+                    i2pImageData = { base64: base64String, mimeType: file.type };
+                };
+                reader.readAsDataURL(file);
+            }
+
+            i2pGenerateBtn.addEventListener('click', async () => {
+                if (!i2pImageData) return;
+                
+                i2pPlaceholder.classList.add('hidden');
+                i2pOutput.innerText = '';
+                i2pLoader.classList.remove('hidden');
+                i2pGenerateBtn.disabled = true;
+                i2pGenerateBtn.textContent = 'Analyzing...';
+
+                const userPrompt = "Describe this image in detail for a generative AI art prompt. Focus on the subject, style, mood, colors, composition, and any other visually important elements. Craft a single, descriptive paragraph.";
+                try {
+                    const generatedText = await callGemini(userPrompt, false, i2pImageData);
+                    if (generatedText) {
+                        i2pOutput.innerText = generatedText.trim();
+                        i2pWordCount.textContent = `Word Count: ${generatedText.trim().split(/\s+/).filter(Boolean).length}`;
+                    } else {
+                        i2pOutput.innerText = 'Error: Could not generate prompt.';
+                    }
+                } catch(e) {
+                    console.error("Image to Prompt Error:", e);
+                    i2pOutput.innerText = 'Error: Request failed.';
+                } finally {
+                    i2pLoader.classList.add('hidden');
+                    i2pGenerateBtn.disabled = false;
+                    i2pGenerateBtn.textContent = '✨ Generate Prompt from Image';
+                }
+            });
+
+            i2pCopyBtn.addEventListener('click', (e) => {
+                const text = i2pOutput.innerText;
+                if(!text) return;
+                navigator.clipboard.writeText(text).then(() => {
+                    e.target.textContent = 'Copied!';
+                    setTimeout(() => e.target.textContent = 'Copy', 2000);
+                });
+            });
+
+            // --- STORY TO PROMPT LOGIC ---
+            const s2pTextInput = document.getElementById('s2p-text-input');
+            const s2pGenerateBtn = document.getElementById('s2p-generate-btn');
+            const s2pPlaceholder = document.getElementById('s2p-placeholder');
+            const s2pLoader = document.getElementById('s2p-loader');
+            const s2pOutput = document.getElementById('s2p-output');
+            const s2pWordCount = document.getElementById('s2p-word-count');
+            const s2pCopyBtn = document.getElementById('s2p-copy-btn');
+            
+            s2pGenerateBtn.addEventListener('click', async () => {
+                const storyText = s2pTextInput.value;
+                if (!storyText.trim()) return;
+
+                s2pPlaceholder.classList.add('hidden');
+                s2pOutput.innerText = '';
+                s2pLoader.classList.remove('hidden');
+                s2pGenerateBtn.disabled = true;
+                s2pGenerateBtn.textContent = 'Analyzing...';
+                
+                const userPrompt = `You are a prompt engineering expert. Analyze the following text and extract the most visually compelling scene. Create a detailed and effective image generation prompt from it. The prompt should be a single, descriptive paragraph followed by technical parameters like --ar 16:9 --q 80.\n\nText: "${storyText}"`;
+
+                try {
+                    const generatedText = await callGemini(userPrompt);
+                    if (generatedText) {
+                        s2pOutput.innerText = generatedText.trim();
+                        s2pWordCount.textContent = `Word Count: ${generatedText.trim().split(/\s+/).filter(Boolean).length}`;
+                    } else {
+                        s2pOutput.innerText = 'Error: Could not generate prompt.';
+                    }
+                } catch(e) {
+                    console.error("Story to Prompt Error:", e);
+                    s2pOutput.innerText = 'Error: Request failed.';
+                } finally {
+                    s2pLoader.classList.add('hidden');
+                    s2pGenerateBtn.disabled = false;
+                    s2pGenerateBtn.textContent = '✨ Generate Prompt from Text';
+                }
+            });
+            
+             s2pCopyBtn.addEventListener('click', (e) => {
+                const text = s2pOutput.innerText;
+                if(!text) return;
+                navigator.clipboard.writeText(text).then(() => {
+                    e.target.textContent = 'Copied!';
+                    setTimeout(() => e.target.textContent = 'Copy', 2000);
+                });
+            });
+
+
+            // Initial UI State
+            updateImgWordCount('');
+            updateVidWordCount('');
+        });
+    </script>
+</body>
+</html>
+
